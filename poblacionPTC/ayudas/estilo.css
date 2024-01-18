@@ -1,0 +1,8 @@
+table{
+  border-radius: 20px;
+}
+.first_col{
+  white-space: nowrap;
+  font-size: large;
+  width: auto;  
+}

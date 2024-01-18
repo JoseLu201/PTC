@@ -1,0 +1,21 @@
+  table,
+  th,
+  td {
+    border-collapse: collapse;
+    border: 1px solid black;
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 8px;
+
+  }
+
+  .first_col {
+    white-space: nowrap;
+    font-size: large;
+    width: auto;
+    font-weight: bold;
+    /* text-align: center; */
+  }
+
+  .centered{
+    text-align: center;
+  }

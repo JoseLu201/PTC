@@ -1,0 +1,56 @@
+
+
+import json
+import json
+import math
+
+def calcular_distancia(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+def agrupar_puntos(datos, umbral_distancia, min_puntos, max_puntos):
+    clusters = []
+    current_cluster = []
+
+    for i, punto in enumerate(datos):
+        if not current_cluster:
+            current_cluster.append(punto)
+        else:
+            distancia = calcular_distancia(current_cluster[-1][0], current_cluster[-1][1], punto[0], punto[1])
+            if distancia < umbral_distancia and len(current_cluster) < max_puntos:
+                current_cluster.append(punto)
+            else:
+                if len(current_cluster) >= min_puntos:
+                    clusters.append({
+                        "numero_cluster": len(clusters) + 1,
+                        "numero_puntos": len(current_cluster),
+                        "puntosX": [p[0] for p in current_cluster],
+                        "puntosY": [p[1] for p in current_cluster]
+                    })
+                current_cluster = [punto]
+
+    # Añadir el último clúster si cumple con el mínimo de puntos
+    if len(current_cluster) >= min_puntos:
+        clusters.append({
+            "numero_cluster": len(clusters) + 1,
+            "numero_puntos": len(current_cluster),
+            "puntosX": [p[0] for p in current_cluster],
+            "puntosY": [p[1] for p in current_cluster]
+        })
+
+    return clusters
+
+def cargar_datos_desde_json(ruta):
+    with open(ruta, "r") as file:
+        datos = [json.loads(line) for line in file]
+        #print(json.dumps(datos, indent=2))
+        print(datos["Iteracion"])
+
+    #return [(p["PuntosX"], p["PuntosY"]) for p in datos]
+
+def guardar_clusters_a_json(ruta, clusters):
+    with open(ruta, "w") as file:
+        for cluster in clusters:
+            file.write(json.dumps(cluster) + '\n')
+    
+    
+cargar_datos_desde_json("./dirLectura0/datosLaser.json")

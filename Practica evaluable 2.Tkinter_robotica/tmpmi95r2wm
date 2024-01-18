@@ -1,0 +1,223 @@
+import tkinter as tk
+from tkinter import messagebox
+import vrep
+import os
+from vrep_manager import VrepManager
+from capturar import capturar_datos
+
+class InterfazGrafica:
+    def __init__(self, root, vrep_manager):
+        self.root = root
+        self.vrep_manager = vrep_manager
+        self.root.geometry("700x300")
+        self.root.title("Interfaz Gráfica")
+        self.label_estado = tk.Label(self.root, text="Estado: No conectado a VREP")
+        self.label_estado.grid(row=3, column=0)
+        
+
+        # Variables de parámetros (puedes usar variables globales o un archivo de configuración)
+        self.iteraciones = tk.IntVar(value=50)
+        self.cerca = tk.DoubleVar(value=0.5)
+        self.media = tk.DoubleVar(value=1.5)
+        self.lejos = tk.DoubleVar(value=2.5)
+        self.min_points = tk.IntVar(value=0)
+        self.max_points= tk.IntVar(value=0)
+        self.umbral = tk.DoubleVar(value=.0)
+        
+        self.param_col = 1
+        
+        self.ficheros = self.load_files("./dirLectura0")
+        print(self.ficheros)
+        # Crear elementos de la interfaz
+        self.create_interface()
+
+    def create_interface(self):
+        # Etiquetas
+        tk.Label(self.root, text="Parámetros").grid(row=2, column=self.param_col)
+        
+        tk.Label(self.root, text="Fichero para la captura").grid(row=2, column=self.param_col+2)
+        
+        # Entradas de texto
+        self.label_iters = tk.Label(self.root, text="Iteraciones:",anchor="e",width=15)
+        self.label_iters.grid(row=3, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.iteraciones,width=10)
+        self.iters.grid(row=3, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="Cerca:",anchor="e",width=15)
+        self.label_iters.grid(row=4, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.cerca,width=10)
+        self.iters.grid(row=4, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="Media:", anchor="e",width=15)
+        self.label_iters.grid(row=5, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.media,width=10)
+        self.iters.grid(row=5, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="Lejos:",anchor="e",width=15)
+        self.label_iters.grid(row=6, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.lejos,width=10)
+        self.iters.grid(row=6, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="Min puntos:",anchor="e",width=15)
+        self.label_iters.grid(row=7, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.min_points,width=10)
+        self.iters.grid(row=7, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="Max puntos:",anchor="e",width=15)
+        self.label_iters.grid(row=8, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.max_points,width=10)
+        self.iters.grid(row=8, column=self.param_col+1)
+        
+        self.label_iters = tk.Label(self.root, text="UmbralDistancia:",anchor="e",width=16)
+        self.label_iters.grid(row=9, column=self.param_col)
+        self.iters = tk.Entry(self.root, textvariable=self.umbral,width=10)
+        self.iters.grid(row=9, column=self.param_col+1)
+        
+
+        
+
+        # Botones
+        self.connect_button = tk.Button(self.root, text="Conectar con VREP", command=self.connect_vrep)
+        self.connect_button.grid(row=1, column=0)
+        
+        self.disconnect_button = tk.Button(self.root, text="Desconectar y detener", state=tk.DISABLED, command=self.disconnect_vrep)
+        self.disconnect_button.grid(row=2, column=0)
+
+        self.capture_button = tk.Button(self.root, text="Capturar", state=tk.DISABLED, command=self.capture_data)
+        self.capture_button.grid(row=4, column=0)
+        
+        self.gruop_button = tk.Button(self.root, text="Agrupar", state=tk.DISABLED, command=self.agrupar)
+        self.gruop_button.grid(row=5, column=0)
+        
+        self.extraer_button = tk.Button(self.root, text="Exrteaer Caracteristicas", state=tk.DISABLED, command=self.agrupar)
+        self.extraer_button.grid(row=6, column=0)
+        
+        self.train_button = tk.Button(self.root, text="Entrenar Clasificador", state=tk.DISABLED, command=self.agrupar)
+        self.train_button.grid(row=7, column=0)
+        
+        self.predecir_button = tk.Button(self.root, text="Predecir", state=tk.DISABLED, command=self.agrupar)
+        self.predecir_button.grid(row=8, column=0)
+        
+        self.exit_button = tk.Button(self.root, text="Salir", state=tk.ACTIVE, command=self.salir)
+        self.exit_button.grid(row=9, column=0)
+        
+        self.change_button = tk.Button(self.root, text="Cambiar", state=tk.ACTIVE, command=self.change_data)
+        self.change_button.grid(row=11, column=self.param_col)
+        
+        self.debug_button = tk.Button(self.root, text="DEBUG", state=tk.ACTIVE, command=self.debug)
+        self.debug_button.grid(row=12, column=self.param_col)
+
+
+        # Configurar el cierre de la ventana
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        
+        #Panel derecho de arvhivos
+        self.listbox_ficheros = tk.Listbox(self.root, width=35, height=12)
+        for fichero in self.ficheros:
+            self.listbox_ficheros.insert(tk.END, fichero)
+            
+        self.listbox_ficheros.grid(row=3 ,column=self.param_col+2, rowspan=9, sticky="nsew")
+
+    def connect_vrep(self):
+        if self.vrep_manager.conectar_vrep():
+            self.label_estado.config(text="Estado: Conectado a VREP")
+            self.disconnect_button["state"] = tk.NORMAL
+            # self.move_button["state"] = tk.NORMAL
+            self.capture_button["state"] = tk.NORMAL
+
+    def disconnect_vrep(self):
+        self.vrep_manager.desconectar_vrep()
+        self.label_estado.config(text="Estado: No conectado a VREP")
+        self.disconnect_button["state"] = tk.DISABLED
+        # self.move_button["state"] = tk.DISABLED
+        self.capture_button["state"] = tk.DISABLED
+        
+    # def connect_vrep(self):
+    #     vrep.simxFinish(-1)
+    #     self.clientID = vrep.simxStart('127.0.0.1', 19999, True, True, 5000, 5)
+    #     print(self.clientID)
+    #     if self.clientID != -1:
+    #         messagebox.showinfo("Conexión", "Conexión establecida con VREP")
+    #         self.capture_button["state"] = tk.NORMAL
+    #         self.disconnect_button["state"] = tk.NORMAL
+    #         self.connect_button["state"] = tk.DISABLED  # Deshabilitar el botón de conexión después de la conexión
+
+    #         _, self.robothandle = vrep.simxGetObjectHandle(self.clientID, 'Pioneer_p3dx', vrep.simx_opmode_oneshot_wait)
+    #         _, self.camhandle = vrep.simxGetObjectHandle(self.clientID, 'Vision_sensor', vrep.simx_opmode_oneshot_wait)
+    #     else:
+    #         messagebox.showerror("Error de conexión", "No se puede conectar a VREP. Inicia la simulación antes de llamar a este script.")
+
+    # def disconnect_vrep(self):
+    #     if self.clientID != -1:
+    #         vrep.simxStopSimulation(self.clientID, vrep.simx_opmode_oneshot_wait)
+    #         vrep.simxFinish(self.clientID)
+
+    #         messagebox.showinfo("Desconexión", "Desconexión de VREP realizada")
+    #         self.capture_button["state"] = tk.DISABLED
+    #         self.disconnect_button["state"] = tk.DISABLED
+    #         self.connect_button["state"] = tk.NORMAL  # Habilitar el botón de conexión después de desconectar
+
+    def capture_data(self):
+        # Agrega tu código para capturar datos aquí
+        #messagebox.showinfo("Captura", "Datos capturados con éxito")
+        # Verificar si se seleccionó algún archivo
+        seleccionado = self.listbox_ficheros.curselection()
+        if not seleccionado:
+            messagebox.showerror("Error", "Selecciona al menos un archivo antes de capturar.")
+            return
+
+        # Obtener el nombre del archivo seleccionado
+        archivo_seleccionado = self.archivos_disponibles[seleccionado[0]]
+        print(archivo_seleccionado)
+        #capturar_datos(self.vrep_manager, 'positivo1', 'enPieCerca.json')
+
+    
+    def agrupar(self):
+        pass
+    
+    def extraer_caracteristicas(self):
+        pass
+    def entrenar_clasificador(self):
+        pass
+    def predecir(self):
+        pass
+    def salir(self):
+        self.disconnect_vrep()
+        self.on_closing()
+        
+    
+    def change_data(self):
+        pass
+    
+    def debug(self):
+        self.connect_button["state"] = tk.NORMAL
+        self.disconnect_button["state"] = tk.NORMAL
+        self.capture_button["state"] = tk.NORMAL
+        self.gruop_button["state"] = tk.NORMAL
+        self.extraer_button["state"] = tk.NORMAL
+        self.predecir_button["state"] = tk.NORMAL
+        self.train_button["state"] = tk.NORMAL
+        self.exit_button["state"] = tk.NORMAL
+        self.change_button["state"] = tk.NORMAL
+
+    def load_files(self, directorio):
+        # Configura la ruta del directorio 
+        # if f.endswith(".json")
+        lista_ficheros = [f for f in os.listdir(directorio)]
+        return lista_ficheros
+
+
+        
+    def on_closing(self):
+        # Agrega aquí cualquier lógica de cierre adicional (por ejemplo, desconectar VREP)
+        self.root.destroy()
+        
+    
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    vrep_manager = VrepManager()
+    app = InterfazGrafica(root, vrep_manager)
+    root.mainloop()
